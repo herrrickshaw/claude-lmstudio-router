@@ -1,5 +1,7 @@
 # Claude + LM Studio Router
 
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/herrrickshaw/claude-lmstudio-router/blob/main/notebooks/colab_test.ipynb)
+
 This repo has **two tools**:
 
 1. **`router.py`** — a one-shot CLI. Sends a single prompt to the **Claude API
