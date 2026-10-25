@@ -381,6 +381,7 @@ async def stream_anthropic(openai_payload: Dict[str, Any], model_name: str):
     cur_index: Optional[int] = None
     tool_slots: Dict[int, Dict[str, Any]] = {}   # OpenAI tool index -> our block
     finish_reason: Optional[str] = None
+    prompt_tokens = 0
     completion_tokens = 0
     out_text_len = 0
 
