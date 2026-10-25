@@ -65,9 +65,8 @@ from __future__ import annotations
 import json
 import os
 import sys
-import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import httpx
 from fastapi import FastAPI, Request
