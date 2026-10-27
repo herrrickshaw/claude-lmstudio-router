@@ -1,0 +1,11 @@
+# Rolled out across the herrrickshaw repos on 2026-10-26. Monthly, one grouped PR per ecosystem.
+# Security updates for known CVEs are a repo setting (Settings > Code security), not this file.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ["*"]
