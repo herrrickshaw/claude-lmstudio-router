@@ -1,0 +1,6 @@
+# Test/dev dependencies. Installed by .github/workflows/health.yml on top of requirements.txt.
+# Added 2026-10-27: the first Health run could not import these on a clean runner
+# (the suite had only ever run in a local venv that happened to have them).
+anthropic
+fastapi
+httpx
