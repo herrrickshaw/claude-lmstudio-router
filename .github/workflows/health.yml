@@ -36,9 +36,13 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
       - name: Install
         run: |
           python -m pip install -U pip
+          pip install -r requirements-dev.txt
           pip install pytest
       - name: Import every module (offline)
         run: python .github/scripts/import_all.py
@@ -54,9 +58,13 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            requirements-dev.txt
       - name: Install
         run: |
           python -m pip install -U pip
+          pip install -r requirements-dev.txt
           pip install "ruff>=0.17,<1" pip-audit
       - name: ruff gate (syntax, undefined names, pylint errors)
         run: ruff check . --select E9,F63,F7,F82,PLE --extend-exclude '*.ipynb' --extend-exclude 'from-working-files'
@@ -64,3 +72,10 @@ jobs:
         run: |
           ruff check . --select F,B,PLE,PLW,NPY,PD,RUF,DTZ,ASYNC --extend-exclude '*.ipynb' --extend-exclude 'from-working-files' --output-format github --exit-zero
           { echo '### ruff bug-rule hits'; echo '```'; ruff check . --select F,B,PLE,PLW,NPY,PD,RUF,DTZ,ASYNC --extend-exclude '*.ipynb' --extend-exclude 'from-working-files' --statistics --exit-zero; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: pip-audit (report only until the known CVE bumps land)
+        continue-on-error: true
+        run: |
+          status=0
+          pip-audit --desc on --format markdown -o audit.md || status=$?
+          { echo '### pip-audit'; cat audit.md; } >> "$GITHUB_STEP_SUMMARY"
+          exit $status
