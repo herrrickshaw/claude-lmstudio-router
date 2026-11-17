@@ -65,9 +65,8 @@ from __future__ import annotations
 import json
 import os
 import sys
-import time
 import uuid
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional
 
 import httpx
 from fastapi import FastAPI, Request
@@ -381,6 +380,7 @@ async def stream_anthropic(openai_payload: Dict[str, Any], model_name: str):
     cur_index: Optional[int] = None
     tool_slots: Dict[int, Dict[str, Any]] = {}   # OpenAI tool index -> our block
     finish_reason: Optional[str] = None
+    prompt_tokens = 0
     completion_tokens = 0
     out_text_len = 0
 
@@ -528,7 +528,14 @@ async def stream_anthropic(openai_payload: Dict[str, Any], model_name: str):
 
     except Exception as e:  # surface backend errors as an Anthropic error event
         log("stream error:", repr(e))
-        if cur_kind is None and not tool_slots:
+        # Close whatever was open so the event stream stays well-formed
+        # (every content_block_start needs a content_block_stop).
+        for ev in close_cur():
+            yield ev
+        for slot in tool_slots.values():
+            if slot["started"]:
+                yield _sse("content_block_stop", {"type": "content_block_stop", "index": slot["index"]})
+        if next_index == 0:
             yield _sse("content_block_start", {
                 "type": "content_block_start", "index": 0,
                 "content_block": {"type": "text", "text": ""}})

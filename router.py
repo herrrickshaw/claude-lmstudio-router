@@ -152,8 +152,12 @@ def call_local(prompt: str, system: str = None, base_url: str = None, model: str
             f"Could not reach LM Studio at {url}. Is LM Studio running with its local "
             f"server started (Developer tab > Start Server)? Underlying error: {e}"
         )
-    except (KeyError, IndexError, json.JSONDecodeError) as e:
+    except (KeyError, IndexError, TypeError, json.JSONDecodeError) as e:
         raise RuntimeError(f"LM Studio returned an unexpected response shape: {e}")
+    except OSError as e:
+        # TimeoutError / ConnectionResetError raised while waiting for or reading the
+        # response are not wrapped in URLError by urllib.
+        raise RuntimeError(f"LM Studio at {url} failed while responding: {e!r}")
 
 
 def route(prompt: str, system: str = None, force_local: bool = False,
