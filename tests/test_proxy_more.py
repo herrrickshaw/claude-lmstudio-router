@@ -311,3 +311,55 @@ def test_main_without_uvicorn_exits_1(monkeypatch, capsys):
     with pytest.raises(SystemExit) as e:
         proxy.main()
     assert e.value.code == 1 and "Missing deps" in capsys.readouterr().err
+
+
+# ---------------------------- mutation survivors ----------------------------
+
+def test_top_p_zero_is_forwarded():
+    assert proxy.build_openai_payload({"model": "m", "messages": [], "top_p": 0}, False)["top_p"] == 0
+
+
+def test_sync_response_has_null_stop_sequence():
+    r = proxy.openai_to_anthropic_response({"choices": [{"message": {"content": "x"}}]}, "m")
+    assert r["stop_sequence"] is None and r["type"] == "message" and r["role"] == "assistant"
+
+
+def test_stream_http_400_is_an_error_but_200_is_not(monkeypatch):
+    _install(monkeypatch, lambda req: httpx.Response(400, text="bad"))
+
+    async def run():
+        return "".join([e async for e in proxy.stream_anthropic({}, "m")])
+    out = asyncio.run(run())
+    assert "LM Studio HTTP 400: bad" in out
+    assert '"stop_reason": "end_turn"' in out and '"output_tokens": 0' in out      # error path closes cleanly
+
+
+def test_stream_tool_delta_without_index_joins_slot_zero(monkeypatch):
+    ev = _stream(monkeypatch, [_c({"tool_calls": [{"id": "a", "function": {"name": "A", "arguments": "1"}}]}),
+                               _c({"tool_calls": [{"index": 0, "function": {"arguments": "2"}}]}, "tool_calls")])
+    assert [d["index"] for e, d in ev if e == "content_block_start"] == [0]
+    assert "".join(d["delta"]["partial_json"] for e, d in ev
+                   if e == "content_block_delta" and d["delta"]["type"] == "input_json_delta") == "12"
+
+
+def test_environment_defaults(monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    for k in ("LMSTUDIO_BASE_URL", "LMSTUDIO_MODEL", "LMSTUDIO_SMALL_MODEL", "PROXY_HOST", "PROXY_PORT",
+              "PROXY_LOG", "LMSTUDIO_TIMEOUT", "PROXY_REASONING"):
+        monkeypatch.delenv(k, raising=False)
+    path = Path(proxy.__file__)
+    spec = importlib.util.spec_from_file_location("proxy_defaults_probe", path)
+    m = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m)
+    assert (m.LMSTUDIO_BASE_URL, m.LMSTUDIO_MODEL, m.LMSTUDIO_SMALL_MODEL) == ("http://localhost:1234/v1", "", "")
+    assert (m.PROXY_HOST, m.PROXY_PORT, m.PROXY_LOG, m.LMSTUDIO_TIMEOUT, m.PROXY_REASONING) == (
+        "127.0.0.1", 8787, False, 600.0, "drop")
+    monkeypatch.setenv("LMSTUDIO_BASE_URL", "http://x:9/v1///")
+    monkeypatch.setenv("LMSTUDIO_MODEL", "  big ")
+    monkeypatch.setenv("PROXY_REASONING", " THINK ")
+    monkeypatch.setenv("PROXY_LOG", "1")
+    m2 = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(m2)
+    assert (m2.LMSTUDIO_BASE_URL, m2.LMSTUDIO_MODEL, m2.LMSTUDIO_SMALL_MODEL, m2.PROXY_REASONING, m2.PROXY_LOG) == (
+        "http://x:9/v1", "big", "big", "think", True)

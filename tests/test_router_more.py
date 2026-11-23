@@ -237,3 +237,10 @@ def test_cli_output_file_written_not_printed(monkeypatch, tmp_path, capsys):
     _cli(monkeypatch, ["--prompt", "P", "--output", str(out)], lambda p, **k: ("RESULT", "local"))()
     assert out.read_text(encoding="utf-8") == "RESULT"
     assert capsys.readouterr().out == f"Result written to {out} (engine: local)\n"
+
+
+def test_forced_local_note_and_newlines_flattened_in_preview(monkeypatch, tmp_path):
+    monkeypatch.setattr(router, "call_local", lambda *a, **k: "L")
+    router.route("line1\nline2", force_local=True)
+    e = json.loads((tmp_path / "log.jsonl").read_text())
+    assert e["note"] == "forced" and e["prompt_preview"] == "line1 line2"
