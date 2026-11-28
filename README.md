@@ -18,6 +18,30 @@ This repo has **two tools**:
    edits, multi-turn loop) driven by a local model instead of the cloud.
    See [Running Claude Code on LM Studio](#running-claude-code-on-lm-studio).
 
+## In plain English
+
+*This section is for readers who do not write software.*
+
+**What is it?** Two helpers for using AI both online and on your own computer.
+1. **The router** sends your request to Claude, an online AI service. If Claude is busy, unreachable or the
+   request fails, it asks a model running on your own computer instead, using the free program LM Studio.
+   It is like phoning the specialist first and asking the colleague next door if the line is down.
+2. **The proxy** is a translator that lets the Claude Code programming assistant work with a model on your own
+   computer.
+
+**Where does your information go?** This matters, so check which one you are using.
+- **Router:** your request goes to Anthropic first. Even if the local model ends up answering, an attempt may
+  already have been sent. For material that must never leave your computer, add `--force-local`, which skips
+  Claude entirely.
+- **Proxy:** requests are forwarded to the LM Studio address you configure. With the default address, that is your own computer.
+- The router keeps a log file of calls on your computer, including a short preview of each request.
+
+**What to expect:** local models are usually slower and make more mistakes than large online ones, and some cannot
+operate the assistant's tools at all. Review their work carefully.
+
+**What you need:** LM Studio with a downloaded model and a reasonably powerful computer. The online route also
+needs an Anthropic API key, which is billed separately from a claude.ai subscription.
+
 Both run **on your own machine** — they talk to LM Studio's local server, which
 only exists on your laptop, so they can't run inside a hosted chat session.
 
